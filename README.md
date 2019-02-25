@@ -1,9 +1,13 @@
 # key-generation
 To generate private key and address pairs for harmony tokens, 
-first download keygen executable from bin/keygen, and then run the following command in the terminal.
+first download keygen_linux or keygen_mac executable from bin directory, and then run the following command in the terminal.
 ```bash
-chmod +x keygen
-./keygen
+(on Linux)
+chmod +x keygen_linux 
+./keygen_linux  
+(on MacOS)
+chmod +x keygen_mac 
+./keygen_mac
  ```
 
 
