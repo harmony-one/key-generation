@@ -3,6 +3,8 @@
 OS=$(uname -s)
 if [ "$OS" == "Linux" ]; then
    sudo apt install python3 python3-distutils python3-dev
+   curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+   sudo python3 get-pip.py
 fi
 if [ "$OS" == "Darwin" ]; then
     if [[ $(command -v brew) == "" ]]; then
@@ -11,8 +13,7 @@ if [ "$OS" == "Darwin" ]; then
     fi
     export PATH="/usr/local/bin:/usr/local/opt/python/libexec/bin:$PATH"
     brew install python3
+    brew postinstall python3
 fi
 
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-sudo python3 get-pip.py
 sudo pip install -r requirements.txt
