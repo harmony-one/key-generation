@@ -2,7 +2,7 @@
 
 OS=$(uname -s)
 if [ "$OS" == "Linux" ]; then
-   sudo apt install python3 python3-distutils
+   sudo apt install python3 python3-distutils python3-dev
 fi
 if [ "$OS" == "Darwin" ]; then
     if [[ $(command -v brew) == "" ]]; then
@@ -15,4 +15,4 @@ fi
 
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 sudo python3 get-pip.py
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
