@@ -2,9 +2,14 @@
 # SECP256k1: y2 = x3 + 7 over F_p, p=FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE FFFFFC2F
 
 import json
+import argparse
+import getpass
 from ecdsa import SigningKey, SECP256k1
 from ecdsa.util import randrange_from_seed__trytryagain
 from _pysha3 import keccak_256
+import crypto
+
+MIN_PASSWORD_LEN = 7
 
 def make_key(seed):
   secexp = randrange_from_seed__trytryagain(seed, SECP256k1.order)
@@ -27,24 +32,46 @@ def gen_priv_pub_keys():
 
     return seed, sk,pk,addr
 
+def get_input_password():
+    pw = "p2"
+    pw1 = "pw1"
+    while pw != pw1 or len(pw) < MIN_PASSWORD_LEN:
+        pw = getpass.getpass("Type your password: ")
+        if len(pw) < MIN_PASSWORD_LEN:
+            print(f"password has length at least {MIN_PASSWORD_LEN}")
+            pw = ""
+            continue
+        pw1 = getpass.getpass("Type your password again: ")
+        if pw != pw1:
+            print("password not match!")
+    return pw
 
 def main():
-    seed, sk, pk, addr = gen_priv_pub_keys()
-    print("\n**********************************")
-    print("Keep your private key file secret!!")
-    print("Don't lose your private key!!")
-    print("We cannot recover your account if you lose your private key!!")
-    print("**********************************\n")
+    parser = argparse.ArgumentParser(description='Harmony Key Generation')
+    parser.add_argument('--password','-p', dest='password', action='store_true',
+                        help=f"""encrypt private key using password (default: false, using random seeds instead)""")
+    args = parser.parse_args()
+    if args.password:
+        pw = get_input_password()
 
-    # print("seed is ", seed)
-    print("private key: ", sk.to_string().hex())
+    seed, sk, pk, addr = gen_priv_pub_keys()
+    print("\n*******************************************")
+    print("Keep key.json file secret. Don't lose it!!")
+    print("********************************************")
+
+    privkey = sk.to_string().hex()
     print("account address: ", addr)
-    print("private key file saved to key.json")
-    print("**********************************\n")
+    print("private key file saved to key.json\n")
 
     dd = dict()
-    dd["private_key"] = sk.to_string().hex()
     dd["address"] = addr
+    if args.password:
+        enckey = crypto.pw_encode(privkey,pw,version=crypto.PW_HASH_VERSION_LATEST)
+        deckey = crypto.pw_decode(enckey,pw,version=crypto.PW_HASH_VERSION_LATEST)
+        dd["private_key_enc"] = enckey
+    else:
+        dd["private_key"] = privkey
+
     with open("key.json",'w') as f:
         json.dump(dd, f, indent=4)
 

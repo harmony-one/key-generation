@@ -1,4 +1,6 @@
 get-pip.py
 *.pyc
 *.json
+client.spec
 build
+dist
