@@ -1,18 +1,28 @@
 # we use Ethereum compatible ecdsa scheme
-# SECP256k1: y2 = x3 + 7 over F_p, p=FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE FFFFFC2F
+# SECP256k1: y^2 = x^3 + 7 over F_p, p=FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE FFFFFC2F
 
 import json
-import argparse
+import time
+import sys
+import hashlib
 import getpass
+
 from ecdsa import SigningKey, SECP256k1
-from ecdsa.util import randrange_from_seed__trytryagain
+from ecdsa.util import randrange_from_seed__trytryagain, string_to_number
 from _pysha3 import keccak_256
+
 import crypto
+import mnemonic as mn
 
 MIN_PASSWORD_LEN = 7
+BLS12_381_ORDER=52435875175126190479447740508185965837690552500527637822603658699938581184513
+SECP256k1_ORDER=115792089237316195423570985008687907852837564279074904382605163141518161494337
 
-def make_key(seed):
-  secexp = randrange_from_seed__trytryagain(seed, SECP256k1.order)
+def is_secret_within_curve_range(secret: int,curve_order=BLS12_381_ORDER) -> bool:
+    return 0 < secret < curve_order
+
+def make_key(rnd, max_range=BLS12_381_ORDER):
+  secexp = randrange_from_seed__trytryagain(rnd, max_range)
   return SigningKey.from_secret_exponent(secexp, curve=SECP256k1)
 
 def gen_seed(num=SECP256k1.baselen):
@@ -20,9 +30,35 @@ def gen_seed(num=SECP256k1.baselen):
         seed = int.from_bytes(f.read(num), 'big')
     return seed
 
-def gen_priv_pub_keys():
-    seed = gen_seed()
-    sk = make_key(seed)
+def gen_priv_only():
+    rnd = gen_seed()
+    sk = make_key(rnd)
+    return sk
+
+def get_secret_from_seed(seed):
+    bip32_seed = mn.Mnemonic.mnemonic_to_seed(seed, '')
+    I = crypto.hmac_oneshot(b"Harmony seed", bip32_seed, hashlib.sha512)
+    master_k = I[0:32]
+    secret = string_to_number(master_k)
+    return secret
+
+def get_priv_from_seed(seed):
+    secret = get_secret_from_seed(seed)
+    sk = SigningKey.from_secret_exponent(secret, curve=SECP256k1)
+    return sk
+
+def gen_priv_and_seed():
+    secret = -1
+    while not is_secret_within_curve_range(secret):
+        seed = mn.Mnemonic().make_seed()
+        secret = get_secret_from_seed(seed)
+
+    sk = SigningKey.from_secret_exponent(secret, curve=SECP256k1)
+    return seed, sk
+
+def gen_priv_and_addr():
+    #sk = gen_priv_only()
+    seed, sk = gen_priv_and_seed()
     pk = sk.get_verifying_key().to_string()
 
     # get address from pubkey
@@ -30,10 +66,10 @@ def gen_priv_pub_keys():
     keccak.update(pk)
     addr = "0x{}".format(keccak.hexdigest()[24:])
 
-    return seed, sk,pk,addr
+    return seed,sk,pk,addr
 
-def get_input_password():
-    pw = "p2"
+def input_password():
+    pw = "pw"
     pw1 = "pw1"
     while pw != pw1 or len(pw) < MIN_PASSWORD_LEN:
         pw = getpass.getpass("Type your password: ")
@@ -46,34 +82,65 @@ def get_input_password():
             print("password not match!")
     return pw
 
-def main():
-    parser = argparse.ArgumentParser(description='Harmony Key Generation')
-    parser.add_argument('--password','-p', dest='password', action='store_true',
-                        help=f"""encrypt private key using password (default: false, using random seeds instead)""")
-    args = parser.parse_args()
-    if args.password:
-        pw = get_input_password()
+def is_seed_equal(seed,seed1):
+    seed = seed.strip().split()
+    seed1 = seed1.strip().split()
+    if len(seed) != len(seed1):
+        return False
+    for i in range(len(seed)):
+        if seed[i] != seed1[i]:
+            return False
+    return True
 
-    seed, sk, pk, addr = gen_priv_pub_keys()
-    print("\n*******************************************")
-    print("Keep key.json file secret. Don't lose it!!")
-    print("********************************************")
+
+
+# we don't have GUI, this is the terminal hack
+def record_seed(seed):
+    seed1 = ""
+    print("\nwrite down 12 words in a paper and keep it secret!!\n")
+    print(seed)
+    print("\nenter 12 words in the same order, make terminal window large enough to let 12 words in one line:\n")
+    while not is_seed_equal(seed,seed1):
+        seed1 = input("")
+        sys.stdout.write("\033[F"+"\r"+"\033[K")
+        sys.stdout.flush()
+    for i in range(4):
+        sys.stdout.write("\033[F\r\033[K")
+        sys.stdout.flush()
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+
+
+def decrypt_file(filename,pw):
+    with open("key.json","r") as f:
+        dd = json.load(f)
+    sk_str = crypto.pw_decode(dd["private_key_enc"],pw,version=crypto.PW_HASH_VERSION_LATEST)
+    return sk_str
+
+
+def main():
+    pw = input_password()
+
+    seed, sk, pk, addr = gen_priv_and_addr()
 
     privkey = sk.to_string().hex()
-    print("account address: ", addr)
-    print("private key file saved to key.json\n")
 
     dd = dict()
     dd["address"] = addr
-    if args.password:
-        enckey = crypto.pw_encode(privkey,pw,version=crypto.PW_HASH_VERSION_LATEST)
-        deckey = crypto.pw_decode(enckey,pw,version=crypto.PW_HASH_VERSION_LATEST)
-        dd["private_key_enc"] = enckey
-    else:
-        dd["private_key"] = privkey
+    enckey = crypto.pw_encode(privkey,pw,version=crypto.PW_HASH_VERSION_LATEST)
+    dd["private_key_enc"] = enckey
 
     with open("key.json",'w') as f:
         json.dump(dd, f, indent=4)
+
+    print("\n**************************************************")
+    print("private key can be recovered from key.json, or from seed phrase")
+    print("Keep key.json file and seed phrase secret. Don't lose them")
+    print("***************************************************")
+    print("Your account address: ", addr)
+    print("***************************************************")
+
+    record_seed(seed)
 
 
 if __name__ == "__main__":

@@ -491,13 +491,15 @@ def user_dir():
         #raise Exception("No home directory found in environment variables.")
         return
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
 
-def resource_path(*parts):
-    return os.path.join(pkg_dir, *parts)
-
-
-# absolute path to python package folder of electrum ("lib")
-pkg_dir = os.path.split(os.path.realpath(__file__))[0]
+    return os.path.join(base_path, relative_path)
 
 
 def is_valid_email(s):
