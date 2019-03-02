@@ -72,7 +72,7 @@ def input_password():
     pw = "pw"
     pw1 = "pw1"
     while pw != pw1 or len(pw) < MIN_PASSWORD_LEN:
-        pw = getpass.getpass("Type your password: ")
+        pw = getpass.getpass(f"Type your password (at least {MIN_PASSWORD_LEN} chars): ")
         if len(pw) < MIN_PASSWORD_LEN:
             print(f"password has length at least {MIN_PASSWORD_LEN}")
             pw = ""
@@ -97,18 +97,32 @@ def is_seed_equal(seed,seed1):
 # we don't have GUI, this is the terminal hack
 def record_seed(seed):
     seed1 = ""
-    print("\nwrite down 12 words in a paper and keep it secret!!\n")
+    print("\n\nmake terminal window wide enough to hold 12 words in one line:")
+    print("write down 12 words in a paper and keep it secret\n")
+    print("**********************************************************************")
     print(seed)
-    print("\nenter 12 words in the same order, make terminal window large enough to let 12 words in one line:\n")
+    print("**********************************************************************\n")
+    ans = ""
+    while ans != "yes" and ans != "quit":
+        ans = input("write down ready? if ready type 'yes', to quit type 'quit':  ")
+        sys.stdout.write("\033[F\r\033[K")
+        sys.stdout.flush()
+
+    if ans == "quit":
+        return False
+
+    sys.stdout.write("\033[3A\r\033[K\r to quit, type 'quit'\r\033[3B")
+    sys.stdout.flush()
+    print("enter 12 words in the same order")
     while not is_seed_equal(seed,seed1):
         seed1 = input("")
-        sys.stdout.write("\033[F"+"\r"+"\033[K")
-        sys.stdout.flush()
-    for i in range(4):
+        if seed1.strip() == "quit":
+            return False
         sys.stdout.write("\033[F\r\033[K")
         sys.stdout.flush()
     sys.stdout.write("\n")
     sys.stdout.flush()
+    return True
 
 
 def decrypt_file(filename,pw):
@@ -130,17 +144,18 @@ def main():
     enckey = crypto.pw_encode(privkey,pw,version=crypto.PW_HASH_VERSION_LATEST)
     dd["private_key_enc"] = enckey
 
-    with open("key.json",'w') as f:
-        json.dump(dd, f, indent=4)
 
-    print("\n**************************************************")
-    print("private key can be recovered from key.json, or from seed phrase")
-    print("Keep key.json file and seed phrase secret. Don't lose them")
-    print("***************************************************")
+    print("\nprivate key can be recovered from key.json, or from seed phrase")
+    print("Keep key.json file and seed phrase secret. Don't lose them\n")
+    print("**********************************************************************")
     print("Your account address: ", addr)
-    print("***************************************************")
+    print("**********************************************************************")
 
-    record_seed(seed)
+    if record_seed(seed):
+        with open("key.json",'w') as f:
+            json.dump(dd, f, indent=4)
+    else:
+        print("quit the key generation program, please retry again")
 
 
 if __name__ == "__main__":
