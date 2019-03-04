@@ -31,5 +31,5 @@ The program will first ask for your password which is used to encrypt the privat
 The program also creates seed phrase (12 ordered words) which can be used to recover your private key. 
 
 This means you can recover the private key from either seed phrase or key.json with your password. The best practice is to write down the seed phrase (12 words) 
-in a paper and store it securely, and save the key.json file in some offline storage (e.g. usb or computer that not connecting to network)
+on paper and store it securely, and save the key.json file in offline storage (e.g. an usb or computer that is not connecting to the Internet)
 
