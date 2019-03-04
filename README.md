@@ -5,6 +5,7 @@ first download keygen_linux or keygen_mac executable from bin directory, and the
 (on Linux)
 chmod +x keygen_linux 
 ./keygen_linux  
+
 (on MacOS)
 chmod +x keygen_mac 
 ./keygen_mac
