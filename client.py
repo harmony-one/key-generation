@@ -18,7 +18,7 @@ MIN_PASSWORD_LEN = 7
 BLS12_381_ORDER=52435875175126190479447740508185965837690552500527637822603658699938581184513
 SECP256k1_ORDER=115792089237316195423570985008687907852837564279074904382605163141518161494337
 
-def is_secret_within_curve_range(secret: int,curve_order=BLS12_381_ORDER) -> bool:
+def is_secret_within_curve_range(secret: int,curve_order=SECP256k1_ORDER) -> bool:
     return 0 < secret < curve_order
 
 def make_key(rnd, max_range=BLS12_381_ORDER):
