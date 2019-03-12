@@ -10,7 +10,6 @@ aiorpcX==0.10.5
 setuptools==40.8.0
 bitcoin==1.1.42
 interface==2.11.1
-jnius==1.1.0
 network==0.1
 simple_config==1.0.1
 transaction==2.4.0
